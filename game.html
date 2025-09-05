@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kaun Banega Crorepati</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d0d1a;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+        .game-container {
+            max-width: 900px;
+            width: 100%;
+            background-color: #1a1a2e;
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.8s ease-in-out;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .header {
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #ffcc00;
+            text-shadow: 0 0 10px #ffcc00;
+        }
+        .money-tree {
+            flex-grow: 1;
+            background-color: #2a2a44;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-y: auto;
+            max-height: 350px;
+        }
+        .money-tree-item {
+            padding: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            font-size: 1rem;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+        .money-tree-item.current {
+            background-color: #ffcc00;
+            color: #1a1a2e;
+            font-weight: bold;
+            border-radius: 0.25rem;
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(255, 204, 0, 0.7);
+        }
+        .question-box {
+            background-color: #2a2a44;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            text-align: center;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+        @media (min-width: 640px) {
+            .options-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        .option-button {
+            background-color: #4a4a6e;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            text-align: left;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            border: 2px solid transparent;
+        }
+        .option-button:hover {
+            background-color: #5a5a7e;
+        }
+        .option-button.correct {
+            background-color: #4ade80;
+            color: #1a1a2e;
+            border: 2px solid #22c55e;
+            animation: flashCorrect 1s ease-in-out;
+        }
+        .option-button.incorrect {
+            background-color: #ef4444;
+            color: #fff;
+            border: 2px solid #b91c1c;
+            animation: shake 0.5s;
+        }
+        @keyframes flashCorrect {
+            0%, 100% { background-color: #4ade80; }
+            50% { background-color: #86efac; }
+        }
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            20% { transform: translateX(-5px); }
+            40% { transform: translateX(5px); }
+            60% { transform: translateX(-5px); }
+            80% { transform: translateX(5px); }
+            100% { transform: translateX(0); }
+        }
+        .lifeline-button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            font-weight: bold;
+            transition: transform 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        .lifeline-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+        }
+        .lifeline-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            backdrop-filter: blur(5px);
+            visibility: hidden;
+            opacity: 0;
+            transition: visibility 0s, opacity 0.3s linear;
+        }
+        .modal.show {
+            visibility: visible;
+            opacity: 1;
+        }
+        .modal-content {
+            background-color: #1a1a2e;
+            padding: 2rem;
+            border-radius: 1rem;
+            text-align: center;
+            width: 90%;
+            max-width: 400px;
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        }
+        .modal.show .modal-content {
+            transform: scale(1);
+        }
+        .phone-friend-dialog {
+            background-color: #2a2a44;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            text-align: left;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="start-screen" class="game-container min-h-[400px] flex-col items-center justify-center text-center">
+        <h1 class="text-4xl sm:text-5xl font-extrabold text-white mb-6">Kaun Banega Crorepati</h1>
+        <p class="text-gray-300 text-lg mb-8">Test your knowledge and climb the money tree to win a virtual billion!</p>
+        <button id="start-game-btn" class="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 px-8 rounded-full shadow-lg transition-all transform hover:scale-105">Start Game</button>
+    </div>
+
+    <div id="game-screen" class="game-container hidden">
+        <div class="header">
+            Question <span id="question-number">1</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="md:col-span-2 flex flex-col gap-4">
+                <div class="question-box">
+                    <p id="question-text" class="text-xl sm:text-2xl font-semibold mb-4 text-center"></p>
+                </div>
+                <div class="options-grid">
+                    <button id="option-a" class="option-button"><span class="font-bold">A:</span> <span class="option-text"></span></button>
+                    <button id="option-b" class="option-button"><span class="font-bold">B:</span> <span class="option-text"></span></button>
+                    <button id="option-c" class="option-button"><span class="font-bold">C:</span> <span class="option-text"></span></button>
+                    <button id="option-d" class="option-button"><span class="font-bold">D:</span> <span class="option-text"></span></button>
+                </div>
+                <div class="lifelines flex justify-center gap-4 mt-4">
+                    <button id="lifeline-50-50" class="lifeline-button bg-purple-600 hover:bg-purple-700 text-white"><span class="font-mono">50:50</span></button>
+                    <button id="lifeline-audience" class="lifeline-button bg-blue-600 hover:bg-blue-700 text-white">Ask the Audience</button>
+                    <button id="lifeline-phone" class="lifeline-button bg-red-600 hover:bg-red-700 text-white">Phone a Friend</button>
+                </div>
+            </div>
+            <div class="md:col-span-1">
+                <div class="money-tree">
+                    <!-- Money tree items will be dynamically added here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-over-screen" class="game-container hidden min-h-[400px] flex-col items-center justify-center text-center">
+        <h2 id="game-over-title" class="text-3xl sm:text-4xl font-extrabold mb-4">Game Over!</h2>
+        <p class="text-lg text-gray-300 mb-6">You finished with a score of:</p>
+        <p id="final-score" class="text-5xl sm:text-6xl font-extrabold text-yellow-500 mb-8"></p>
+        <button id="restart-btn" class="bg-green-500 hover:bg-green-600 text-black font-bold py-4 px-8 rounded-full shadow-lg transition-all transform hover:scale-105">Play Again</button>
+    </div>
+    
+    <!-- Custom Message Box Modal -->
+    <div id="modal-container" class="modal">
+        <div class="modal-content">
+            <h3 id="modal-title" class="text-2xl font-bold mb-4"></h3>
+            <p id="modal-message" class="text-lg text-gray-300 mb-6"></p>
+            <div id="phone-friend-message" class="phone-friend-dialog hidden"></div>
+            <button id="modal-ok-btn" class="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 px-6 rounded-full mt-4">OK</button>
+        </div>
+    </div>
+
+    <script>
+        // Game State Variables
+        let currentQuestionIndex = 0;
+        let lifelines = {
+            '50-50': true,
+            'audience': true,
+            'phone': true
+        };
+        const moneyLevels = [
+            '₹0', '₹1,000', '₹2,000', '₹3,000', '₹5,000', '₹10,000', '₹20,000',
+            '₹40,000', '₹80,000', '₹1,60,000', '₹3,20,000', '₹6,40,000', '₹12,50,000',
+            '₹25,00,000', '₹50,00,000', '₹1 Crore', '₹7 Crore'
+        ];
+
+        // UI Elements
+        const startScreen = document.getElementById('start-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const startGameBtn = document.getElementById('start-game-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const questionText = document.getElementById('question-text');
+        const questionNumber = document.getElementById('question-number');
+        const optionButtons = [
+            document.getElementById('option-a'),
+            document.getElementById('option-b'),
+            document.getElementById('option-c'),
+            document.getElementById('option-d')
+        ];
+        const moneyTreeContainer = document.querySelector('.money-tree');
+        const finalScore = document.getElementById('final-score');
+        const lifeline5050Btn = document.getElementById('lifeline-50-50');
+        const lifelineAudienceBtn = document.getElementById('lifeline-audience');
+        const lifelinePhoneBtn = document.getElementById('lifeline-phone');
+        
+        // Modal Elements
+        const modalContainer = document.getElementById('modal-container');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const phoneFriendMessage = document.getElementById('phone-friend-message'); // Corrected typo here
+        const modalOkBtn = document.getElementById('modal-ok-btn');
+
+        // Questions Data
+        const questions = [
+            {
+                question: "Which country is home to the largest pyramid in the world?",
+                options: ["Egypt", "Mexico", "Sudan", "Peru"],
+                answer: "Mexico",
+                phoneFriend: "A friend says: 'I'm pretty sure it's the Great Pyramid of Cholula, which is in Mexico. It's not as well-known as the ones in Egypt, but it's bigger by volume.'",
+            },
+            {
+                question: "What is the capital of Australia?",
+                options: ["Sydney", "Melbourne", "Canberra", "Perth"],
+                answer: "Canberra",
+                phoneFriend: "A friend says: 'A lot of people think it's Sydney or Melbourne, but the capital is actually Canberra.'",
+            },
+            {
+                question: "What is the longest river in the world?",
+                options: ["Amazon River", "Nile River", "Yangtze River", "Mississippi River"],
+                answer: "Nile River",
+                phoneFriend: "A friend says: 'This is a tricky one. While the Amazon is huge by volume, the Nile is generally considered the longest.'",
+            },
+            {
+                question: "Who wrote 'Romeo and Juliet'?",
+                options: ["Charles Dickens", "William Shakespeare", "Jane Austen", "Mark Twain"],
+                answer: "William Shakespeare",
+                phoneFriend: "A friend says: 'That's a classic! William Shakespeare is the author.'",
+            },
+            {
+                question: "What is the chemical symbol for gold?",
+                options: ["Au", "Ag", "Fe", "Pb"],
+                answer: "Au",
+                phoneFriend: "A friend says: 'I remember this from chemistry class. The symbol for gold is Au, from the Latin word 'aurum'.'",
+            },
+            {
+                question: "Which planet is known as the 'Red Planet'?",
+                options: ["Venus", "Mars", "Jupiter", "Saturn"],
+                answer: "Mars",
+                phoneFriend: "A friend says: 'Mars gets its red color from iron oxide on its surface, so it's called the Red Planet.'",
+            },
+            {
+                question: "What is the largest ocean on Earth?",
+                options: ["Atlantic Ocean", "Indian Ocean", "Arctic Ocean", "Pacific Ocean"],
+                answer: "Pacific Ocean",
+                phoneFriend: "A friend says: 'The Pacific Ocean is by far the biggest. It's even larger than all the landmasses combined.'",
+            },
+            {
+                question: "Which famous scientist developed the theory of relativity?",
+                options: ["Isaac Newton", "Galileo Galilei", "Albert Einstein", "Stephen Hawking"],
+                answer: "Albert Einstein",
+                phoneFriend: "A friend says: 'It's Albert Einstein, of course! E=mc² is his most famous equation from the theory.'",
+            },
+            {
+                question: "What is the currency of Japan?",
+                options: ["Yuan", "Won", "Yen", "Ringgit"],
+                answer: "Yen",
+                phoneFriend: "A friend says: 'The currency of Japan is the Yen. The symbol is '¥'.",
+            },
+            {
+                question: "What is the highest mountain in the world?",
+                options: ["Mount Everest", "K2", "Kangchenjunga", "Lhotse"],
+                answer: "Mount Everest",
+                phoneFriend: "A friend says: 'Mount Everest is the tallest mountain above sea level, located in the Himalayas.'",
+            },
+            {
+                question: "In what year did the first man walk on the moon?",
+                options: ["1965", "1969", "1971", "1975"],
+                answer: "1969",
+                phoneFriend: "A friend says: 'It was 1969 when Neil Armstrong took his famous first step on the moon.'",
+            },
+            {
+                question: "Which element is the most abundant in the Earth's atmosphere?",
+                options: ["Oxygen", "Hydrogen", "Nitrogen", "Carbon Dioxide"],
+                answer: "Nitrogen",
+                phoneFriend: "A friend says: 'Nitrogen makes up about 78% of the Earth's atmosphere, so it's the most common.'",
+            },
+            {
+                question: "Who painted the Mona Lisa?",
+                options: ["Vincent van Gogh", "Leonardo da Vinci", "Pablo Picasso", "Claude Monet"],
+                answer: "Leonardo da Vinci",
+                phoneFriend: "A friend says: 'The Mona Lisa was painted by the great Renaissance artist, Leonardo da Vinci.'",
+            },
+            {
+                question: "What is the largest animal on Earth?",
+                options: ["African Elephant", "Giraffe", "Blue Whale", "Great White Shark"],
+                answer: "Blue Whale",
+                phoneFriend: "A friend says: 'The Blue Whale is the largest animal ever known to have existed, even bigger than the largest dinosaurs.'",
+            },
+            {
+                question: "Which country is known as the 'Land of the Rising Sun'?",
+                options: ["China", "South Korea", "Japan", "Thailand"],
+                answer: "Japan",
+                phoneFriend: "A friend says: 'This is a classic nickname for Japan, which is located to the east of mainland Asia.'",
+            },
+            {
+                question: "Which of these is not a programming language?",
+                options: ["Python", "Java", "HTML", "C++"],
+                answer: "HTML",
+                phoneFriend: "A friend says: 'HTML is a markup language used for web pages, not a programming language. You can't write logic with it.'",
+            }
+        ];
+
+        // Functions
+        function createMoneyTree() {
+            moneyTreeContainer.innerHTML = '';
+            // Create money tree from highest to lowest
+            for (let i = moneyLevels.length - 1; i >= 0; i--) {
+                const item = document.createElement('div');
+                item.className = 'money-tree-item';
+                item.innerHTML = `<span class="font-bold">${i + 1}.</span> <span>${moneyLevels[i]}</span>`;
+                moneyTreeContainer.appendChild(item);
+            }
+        }
+
+        function updateMoneyTree() {
+            const items = moneyTreeContainer.children;
+            // Clear all current classes
+            for (let i = 0; i < items.length; i++) {
+                items[i].classList.remove('current');
+            }
+            // Add current class to the correct item
+            const currentItemIndex = moneyLevels.length - 1 - currentQuestionIndex;
+            if (items[currentItemIndex]) {
+                items[currentItemIndex].classList.add('current');
+                items[currentItemIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function showQuestion() {
+            if (currentQuestionIndex >= questions.length) {
+                endGame(true);
+                return;
+            }
+
+            const currentQuestion = questions[currentQuestionIndex];
+            questionNumber.textContent = currentQuestionIndex + 1;
+            questionText.textContent = currentQuestion.question;
+
+            // Shuffle options
+            const shuffledOptions = shuffleArray([...currentQuestion.options]);
+
+            // Display options
+            optionButtons.forEach((button, index) => {
+                button.classList.remove('hidden', 'correct', 'incorrect');
+                button.classList.add('bg-4a4a6e', 'hover:bg-5a5a7e');
+                button.disabled = false;
+                const optionTextElement = button.querySelector('.option-text');
+                optionTextElement.textContent = shuffledOptions[index];
+                button.onclick = () => checkAnswer(optionTextElement.textContent, currentQuestion.answer, button);
+            });
+
+            updateMoneyTree();
+        }
+
+        function checkAnswer(selectedOption, correctAnswer, button) {
+            // Disable all buttons to prevent multiple clicks
+            optionButtons.forEach(btn => btn.disabled = true);
+
+            if (selectedOption === correctAnswer) {
+                button.classList.remove('bg-4a4a6e', 'hover:bg-5a5a7e');
+                button.classList.add('correct');
+                showMessageBox('Correct!', `That's right! You've won ${moneyLevels[currentQuestionIndex + 1]}.`);
+                currentQuestionIndex++;
+            } else {
+                button.classList.remove('bg-4a4a6e', 'hover:bg-5a4a7e');
+                button.classList.add('incorrect');
+                // Find and highlight the correct answer
+                optionButtons.forEach(btn => {
+                    if (btn.querySelector('.option-text').textContent === correctAnswer) {
+                        btn.classList.add('correct');
+                    }
+                });
+                showMessageBox('Incorrect!', `The correct answer was: ${correctAnswer}. Game Over.`);
+                endGame(false);
+            }
+        }
+
+        function useLifeline(type) {
+            if (!lifelines[type]) {
+                return;
+            }
+            lifelines[type] = false;
+
+            const currentQuestion = questions[currentQuestionIndex];
+            const correctOption = currentQuestion.answer;
+
+            switch (type) {
+                case '50-50':
+                    const incorrectOptions = currentQuestion.options.filter(opt => opt !== correctOption);
+                    const optionsToRemove = shuffleArray(incorrectOptions).slice(0, 2);
+                    optionButtons.forEach(button => {
+                        const optionText = button.querySelector('.option-text').textContent;
+                        if (optionsToRemove.includes(optionText)) {
+                            button.classList.add('hidden');
+                        }
+                    });
+                    document.getElementById('lifeline-50-50').disabled = true;
+                    showMessageBox('50:50 Used', 'Two incorrect options have been removed.');
+                    break;
+                case 'audience':
+                    const audienceVotes = {};
+                    const options = currentQuestion.options;
+                    // Simulate audience vote, giving the correct answer a high percentage
+                    const correctPercentage = Math.floor(Math.random() * 40) + 40; // 40-80%
+                    audienceVotes[correctOption] = correctPercentage;
+                    const otherOptions = options.filter(opt => opt !== correctOption);
+                    let remainingPercentage = 100 - correctPercentage;
+                    for (let i = 0; i < otherOptions.length; i++) {
+                        const vote = Math.floor(Math.random() * remainingPercentage);
+                        audienceVotes[otherOptions[i]] = vote;
+                        remainingPercentage -= vote;
+                    }
+                    if (remainingPercentage > 0) {
+                        audienceVotes[otherOptions[otherOptions.length - 1]] += remainingPercentage;
+                    }
+                    let audienceMessage = "Audience says:<br>";
+                    for (const [option, percent] of Object.entries(audienceVotes)) {
+                        audienceMessage += `<p class="mt-2">${option}: ${percent}%</p>`;
+                    }
+                    showMessageBox('Ask the Audience', audienceMessage);
+                    document.getElementById('lifeline-audience').disabled = true;
+                    break;
+                case 'phone':
+                    showMessageBox('Phone a Friend', currentQuestion.phoneFriend);
+                    document.getElementById('lifeline-phone').disabled = true;
+                    break;
+            }
+        }
+
+        function endGame(isWinner) {
+            gameScreen.classList.add('hidden');
+            gameOverScreen.classList.remove('hidden');
+            const score = isWinner ? moneyLevels[moneyLevels.length - 1] : moneyLevels[currentQuestionIndex];
+            document.getElementById('game-over-title').textContent = isWinner ? 'Congratulations!' : 'Game Over!';
+            finalScore.textContent = `You won ${score}!`;
+        }
+
+        function resetGame() {
+            currentQuestionIndex = 0;
+            lifelines = {
+                '50-50': true,
+                'audience': true,
+                'phone': true
+            };
+            lifeline5050Btn.disabled = false;
+            lifelineAudienceBtn.disabled = false;
+            lifelinePhoneBtn.disabled = false;
+            gameOverScreen.classList.add('hidden');
+            gameScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function showMessageBox(title, message) {
+            modalTitle.textContent = title;
+            modalMessage.innerHTML = message;
+            modalContainer.classList.add('show');
+            // If message box is from Phone a Friend, show the special dialog
+            if (title === 'Phone a Friend') {
+                phoneFriendMessage.innerHTML = message;
+                modalMessage.classList.add('hidden');
+                phoneFriendMessage.classList.remove('hidden');
+            } else {
+                 modalMessage.classList.remove('hidden');
+                phoneFriendMessage.classList.add('hidden');
+            }
+        }
+
+        function hideMessageBox() {
+            modalContainer.classList.remove('show');
+            if (modalTitle.textContent === 'Correct!') {
+                showQuestion();
+            } else if (modalTitle.textContent === 'Incorrect!' || modalTitle.textContent === 'Congratulations!') {
+                // Game over, do nothing
+            }
+        }
+
+        // Event Listeners
+        startGameBtn.addEventListener('click', async () => {
+            startScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            createMoneyTree();
+            showQuestion();
+        });
+
+        restartBtn.addEventListener('click', () => {
+            resetGame();
+        });
+        modalOkBtn.addEventListener('click', hideMessageBox);
+        lifeline5050Btn.addEventListener('click', () => useLifeline('50-50'));
+        lifelineAudienceBtn.addEventListener('click', () => useLifeline('audience'));
+        lifelinePhoneBtn.addEventListener('click', () => useLifeline('phone'));
+    </script>
+</body>
+</html>
